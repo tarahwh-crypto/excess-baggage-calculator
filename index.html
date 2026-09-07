@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>超額行李費試算工具 / Excess Baggage Fee Calculator</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --navy: #16374d;
+      --navy-2: #1f4a63;
+      --paper: #0e1b24;
+      --card: #16242e;
+      --line: #253844;
+      --ink: #eef3f5;
+      --ink-soft: #9db0ba;
+      --old: #8b9aa3;
+      --old-soft: #22303a;
+      --new: #6fb3d6;
+      --new-soft: #1a3444;
+      --amount: #f0a64c;
+      --danger: #ff7a63;
+      --danger-soft: #3a2420;
+    }
+  }
+  :root[data-theme="dark"] {
+    --navy: #16374d;
+    --navy-2: #1f4a63;
+    --paper: #0e1b24;
+    --card: #16242e;
+    --line: #253844;
+    --ink: #eef3f5;
+    --ink-soft: #9db0ba;
+    --old: #8b9aa3;
+    --old-soft: #22303a;
+    --new: #6fb3d6;
+    --new-soft: #1a3444;
+    --amount: #f0a64c;
+    --danger: #ff7a63;
+    --danger-soft: #3a2420;
+  }
+  :root {
+    --navy: #0f2a3e;
+    --navy-2: #16374d;
+    --paper: #f5f8fa;
+    --card: #ffffff;
+    --line: #dde5ea;
+    --ink: #152430;
+    --ink-soft: #5b6b76;
+    --old: #7a8892;
+    --old-soft: #eef1f3;
+    --new: #2e7ea6;
+    --new-soft: #e7f2f7;
+    --amount: #d9822b;
+    --danger: #c0392b;
+    --danger-soft: #fbe9e7;
+
+    --font-display: 'Microsoft JhengHei', 'PingFang TC', -apple-system, sans-serif;
+    --font-body: 'Microsoft JhengHei', -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'Microsoft JhengHei', ui-monospace, 'SF Mono', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html,body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased; padding: 0 0 60px; line-height: 1.55;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+
+  header {
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-2) 100%);
+    color: #fff; padding: 30px 0 42px; position: relative; overflow: hidden;
+  }
+  header::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 260px; height: 260px;
+    border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.10), transparent 70%);
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  header .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #9fc3d6; font-weight: 700; margin: 0 0 8px; }
+  header h1 { font-family: var(--font-display); font-size: clamp(21px,3.6vw,28px); line-height: 1.2; margin: 0 0 8px; font-weight: 700; }
+  header p.sub { margin: 0; color: #c9d8e1; font-size: 13.5px; max-width: 560px; }
+  .lang-toggle {
+    flex-shrink: 0; display: flex; border: 1px solid rgba(255,255,255,.35); border-radius: 999px;
+    overflow: hidden; position: relative; z-index: 1;
+  }
+  .lang-toggle button {
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 700; padding: 7px 14px; border: none;
+    background: transparent; color: #c9d8e1; cursor: pointer;
+  }
+  .lang-toggle button.active { background: #fff; color: var(--navy); }
+
+  main { margin-top: -22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 20px 22px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(15,42,62,.05); }
+  .card h2 { font-size: 13.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin: 0 0 4px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .card h2 .n { width: 20px; height: 20px; border-radius: 50%; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; flex: none; font-weight: 700; }
+  .card .hint { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 14px; }
+
+  .pillgroup { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { border: 1px solid var(--line); background: #fff; padding: 9px 15px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer; user-select: none; transition: all .15s ease; }
+  .pill input { display: none; }
+  .pill.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+  details.why { margin-top: 12px; }
+  details.why summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--new); list-style: none; display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+  details.why summary::-webkit-details-marker { display: none; }
+  details.why summary::before { content: "›"; display: inline-block; transition: transform .15s ease; font-size: 15px; }
+  details.why[open] summary::before { transform: rotate(90deg); }
+  details.why .body { margin-top: 8px; font-size: 12.5px; color: var(--ink-soft); background: var(--paper); border-radius: 9px; padding: 12px 13px; }
+  details.why .body b { color: var(--ink); }
+
+  .flowblock { border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--paper); font-size: 12.5px; margin-top: 10px; }
+  .flowblock .ft { font-weight: 700; margin-bottom: 6px; color: var(--ink); }
+  .flowblock ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; color: var(--ink-soft); }
+  .flowblock code { font-family: var(--font-mono); background: var(--old-soft); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  input[type="date"], input[type="number"], select {
+    width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 10px 11px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: #fff;
+  }
+  input:focus, select:focus, summary:focus-visible { outline: 2px solid var(--new); outline-offset: 1px; }
+
+  .sysbadge { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+  .sysbadge.old { background: var(--old-soft); color: var(--ink-soft); }
+  .sysbadge.new { background: var(--new-soft); color: var(--new); }
+  .sysbadge .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .sysbadge.old .dot { background: var(--old); }
+  .sysbadge.new .dot { background: var(--new); }
+
+  .routegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 520px) { .routegrid { grid-template-columns: 1fr; } }
+  .checkline { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink); margin-top: 10px; cursor: pointer; user-select: none; }
+  .checkline input { width: 16px; height: 16px; accent-color: var(--navy); }
+  .routeresult { margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); }
+  .routeresult b { color: var(--ink); }
+  .legend { margin-top: 12px; padding: 11px 13px; background: var(--paper); border-radius: 9px; font-size: 11.5px; color: var(--ink-soft); line-height: 1.65; }
+  .legend b { color: var(--ink); }
+  .legend .footnote { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-style: italic; }
+
+  .counter-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .calc-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--paper); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .calc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .calc-label { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 6px; border-radius: 5px; background: var(--old-soft); color: var(--ink-soft); }
+  .calc-sub { display: block; font-size: 11.5px; color: var(--ink-soft); font-weight: 400; margin-top: 4px; width: 100%; }
+  .stepper { display: flex; align-items: center; gap: 0; }
+  .stepper button { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--line); background: #fff; font-size: 16px; line-height: 1; cursor: pointer; color: var(--navy); display: flex; align-items: center; justify-content: center; }
+  .stepper button:active { background: var(--paper); }
+  .stepper .val { width: 34px; text-align: center; font-weight: 700; font-size: 14px; }
+
+  .result { background: linear-gradient(160deg, var(--navy) 0%, var(--navy-2) 100%); color: #fff; position: sticky; bottom: 12px; border-radius: 14px; padding: 18px 20px; box-shadow: 0 10px 30px rgba(15,42,62,.30); }
+  .result .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .result .label { font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: #9fc3d6; font-weight: 700; margin-bottom: 5px; }
+  .result .amount { font-size: clamp(26px,5.5vw,36px); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--amount); }
+  .result .amount .cur { font-size: .45em; font-weight: 700; margin-right: 5px; color: #9fc3d6; }
+  .result .amount.blocked { color: var(--danger); font-size: 15px; font-weight: 700; }
+  .result .breakdown { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.14); display: grid; gap: 6px; font-size: 12.5px; color: #c9d8e1; }
+  .result .breakdown .line { display: flex; justify-content: space-between; gap: 12px; }
+  .result .breakdown .line b { color: #fff; font-variant-numeric: tabular-nums; }
+  .result .note { margin-top: 10px; font-size: 11px; color: #9fc3d6; }
+
+  .banner { display: flex; gap: 10px; align-items: flex-start; background: var(--danger-soft); border: 1px solid var(--danger); color: var(--ink); border-radius: 10px; padding: 12px 14px; font-size: 12.5px; margin-bottom: 16px; }
+  .banner .dot { color: var(--danger); font-weight: 700; flex-shrink: 0; }
+
+  footer { max-width: 880px; margin: 20px auto 0; padding: 0 20px; font-size: 11px; color: var(--ink-soft); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="header-top">
+      <div>
+        <p class="eyebrow" id="txt-eyebrow"></p>
+        <h1 id="txt-title"></h1>
+      </div>
+      <div class="lang-toggle" id="langToggle">
+        <button type="button" data-lang="zh">中文</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </div>
+    <p class="sub" id="txt-sub"></p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="banner"><span class="dot">⚠</span><span id="txt-banner"></span></div>
+
+  <!-- STEP 0: mode -->
+  <section class="card">
+    <h2 id="txt-modeTitle"></h2>
+    <div class="pillgroup" id="modeGroup">
+      <label class="pill active"><input type="radio" name="mode" value="baggage" checked><span data-t="modeBaggage"></span></label>
+      <label class="pill"><input type="radio" name="mode" value="avih"><span data-t="modeAvih"></span></label>
+      <label class="pill"><input type="radio" name="mode" value="sport"><span data-t="modeSport"></span></label>
+    </div>
+  </section>
+
+  <!-- STEP 1: system -->
+  <section class="card">
+    <h2><span class="n">1</span><span id="txt-step1Title"></span></h2>
+    <p class="hint" id="txt-step1Hint"></p>
+
+    <div class="hint" style="margin-bottom:6px;font-weight:700;color:var(--ink)" id="txt-bagsQ"></div>
+    <div class="pillgroup" id="bagGroup">
+      <label class="pill active"><input type="radio" name="bags" value="1" checked><span data-t="bags1"></span></label>
+      <label class="pill"><input type="radio" name="bags" value="2"><span data-t="bags2"></span></label>
+    </div>
+
+    <div class="hint" style="margin:16px 0 6px;font-weight:700;color:var(--ink)" id="whichDateLabel"></div>
+    <p class="hint" id="whichDateHint" style="margin-bottom:10px"></p>
+
+    <div class="flowblock" id="lookupSteps"></div>
+
+    <div class="field" style="margin-top:12px">
+      <label for="doi" id="txt-doiLabel"></label>
+      <input type="date" id="doi">
+    </div>
+    <div id="sysBadgeWrap"></div>
+
+    <details class="why">
+      <summary id="txt-whySummary"></summary>
+      <div class="body" id="txt-whyBody"></div>
+    </details>
+  </section>
+
+  <!-- STEP 2: route -->
+  <section class="card">
+    <h2><span class="n">2</span><span id="txt-step2Title"></span></h2>
+    <p class="hint" id="routeHint"></p>
+    <div id="routePicker"></div>
+  </section>
+
+  <!-- STEP 3: mode-dependent details -->
+  <section class="card">
+    <h2><span class="n">3</span><span id="step3Title"></span></h2>
+    <p class="hint" id="step3Hint"></p>
+    <div class="counter-list" id="mainCounters"></div>
+  </section>
+
+</main>
+
+<div class="wrap"><div class="result" id="result"></div></div>
+
+<footer class="wrap" id="txt-footer"></footer>
+
+<script>
+(function(){
+  const CUTOFF = new Date("2026-09-01T00:00:00");
+
+  const state = {
+    lang: 'zh',
+    mode: 'baggage',
+    bags: 1,
+    doi: '',
+    system: null,       // 'old' | 'new' | null
+    canadaOrigin: false,
+    sydAkl: false,
+    oldOrigin: 'z1', oldDest: 'z1',
+    newOrigin: 'TW', newDest: 'R1',
+    over: 0,
+    ow0523: 0,
+    ow32: 0,
+    os158: 0,
+    os203: 0,
+    petLe32: 0, petMid: 0, petHi: 0,
+    sportOver: 0
+  };
+
+  // ---------- i18n dictionary ----------
+  const STRINGS = {
+    zh: {
+      eyebrow: '運務政策部 · 內部參考工具',
+      title: '超額行李費試算工具',
+      sub: '依 2026-07-31 AOD 公告（自 2026 年 9 月 1 日起實施新版超額行李費率）建立。僅供試算參考。',
+      banner: '因 CM 系統僅能提供新費率，無法辨識開票日判定，故顯示金額僅供參考，請依下方流程查明正確判定日期後再向旅客報價收費。',
+      modeTitle: '試算項目',
+      modeBaggage: '超額行李', modeAvih: '寵物託運', modeSport: '運動器材',
+      step1Title: '判定適用新制或舊制',
+      step1Hint: '先回答這張票的免費行李額度，工具會告訴你該查哪一個開票日。',
+      bagsQ: 'A．這張票價產品的免費託運行李額度',
+      bags1: '僅含 1 件', bags2: '已含 2 件',
+      doiLabel: '查到的判定日期',
+      whySummary: '為什麼要分「原始」跟「最新」開票日',
+      whyBody: '美國 DOT（運輸部）14 CFR 399.88 規定，機票購票後航空公司不得再對已售出的<b>第 1、2 件</b>託運行李漲價。<br><br>票價產品若<b>僅含 1 件</b>免費行李，旅客要掛的第 2 件（即便是超額）仍落在這條保護範圍內，所以即使改過票，也要用<b>最原始</b>的開票日判定費率。<br><br>票價產品若<b>已含 2 件</b>，代表這個保護額度已經用在免費行李上，任何再多出來的超額行李已經超出保護範圍，改用<b>最新（當前）</b>的開票日判定即可。',
+      step2Title: '航線 / 分區',
+      footer: '本工具依內部 AOD 公告資料建立，僅供第一線人員試算參考，實際收費請以 Reservation 系統查核結果及當時有效公告為準。',
+
+      dateLabelOrig: 'B．請查「最原始開票日」',
+      dateHintOrig: '即使這張票曾經改過，也要用第一次開票的日期，不是這次改票後的日期。',
+      lookupTitle: '查詢步驟',
+      lookupOrig: ['開啟 Reservation 頁面（Ctrl+R），輸入 TWD/TKT189-XXXXXXXXXX，展開機票。','查看是否有 FO 列。','無 FO 列（First Issue）→ 直接用機票顯示的開票日（DOI）。','有 FO 列（曾改票）→ 用「最原始開票日」判定，不是這次改票後的日期。'],
+      dateLabelCurrent: 'B．請查「最新（當前）開票日」',
+      dateHintCurrent: '若這張票曾經改票，用最近一次改票後的日期，不是最原始那次。',
+      lookupCurrent: ['點選 Edit E-ticket，展開機票內容。','直接以顯示的開票日（Date of Issue）判定即可，不用查 FO 列。'],
+
+      sysOld: '適用舊制（2026/08/31 前）', sysNew: '適用新制（2026/09/01 起）',
+
+      routePending: '請先完成 STEP 1。',
+      routeHintDefault: '選擇出發地與目的地所屬分區。',
+      routeHintOld: '雙邊皆為第一區才是短程費率；一邊第一區一邊第二區為長程費率。',
+      routeHintNew: '新制以台灣＋區域一～三矩陣計價，加拿大出發及雪梨↔奧克蘭另有固定費率。',
+      canadaOldLabel: '加拿大出發（不分航線，固定費率）',
+      canadaNewLabel: '加拿大出發（固定費率，依目的地區域，加幣計價）',
+      sydAklLabel: '雪梨（SYD）↔ 奧克蘭（AKL）特殊航段（USD 50／件，固定）',
+      originLabel: '出發地', destLabel: '目的地',
+      canadaFixedPlaceholder: '加拿大（固定）',
+      oldZoneLabel: { z1: '第一區（亞洲各航點與關島）', z2: '第二區（亞洲及關島以外）' },
+      newRegionLabel: {
+        TW: '台灣',
+        R1: '區域一（亞洲不含台灣、南亞，及關島）',
+        R2: '區域二（美西五點、加拿大、南亞、大洋洲、中東）',
+        R3: '區域三（美國其他地區、歐洲、非洲、中南美洲）'
+      },
+      oldLegend: '<b>第一區</b>：亞洲各航點與關島（含台灣）。<br><b>第二區</b>：亞洲及關島以外之所有地區（北美、南美、歐洲、中東、大洋洲、非洲）。',
+      newLegend: '<b>台灣</b>：出發或抵達為台灣。<br><b>區域一</b>：亞洲（不含台灣、南亞）、關島。<br><b>區域二</b>：美國西部五點（洛杉磯、安大略、舊金山、西雅圖、鳳凰城）、加拿大、南亞、大洋洲、中東。<br><b>區域三</b>：美國（除區域二、關島）、歐洲、非洲、中南美洲。',
+      southAsiaNote: '南亞（依 IATA Traffic Conference Area 3、子分區 330「南亞次大陸」）涵蓋：阿富汗、孟加拉、不丹、印度、馬爾地夫、尼泊爾、巴基斯坦、斯里蘭卡。',
+      routeResultCanadaFixed: '→ 加拿大出發固定費率，不看分區。',
+      routeResultInvalidCombo: '→ 星宇航網無此組合，請重新選擇',
+      routeResultShort: '→ 雙邊皆第一區 ⇒ <b>短程費率 USD 150／件</b>',
+      routeResultLong: '→ 一邊第一區、一邊第二區 ⇒ <b>長程費率 USD 200／件</b>',
+      routeResultSydAkl: '→ 雪梨↔奧克蘭固定費率，不看分區。',
+      routeResultCanadaNew: (dest, amt) => `→ 加拿大出發 → ${dest} ⇒ <b>CAD ${amt}／件</b>`,
+      routeResultTWTW: '→ 台灣至台灣非有效國際航段',
+      routeResultMatrix: (o, d, r) => `→ ${o} 至 ${d} ⇒ <b>USD ${r}／件</b>`,
+
+      step3Hint: {
+        baggage: '依過磅／量尺寸結果，選擇對應區間直接加減件數即可。',
+        avih: '依寵物＋籠子總重量所屬區間，加減件數即可。',
+        sport: '尺寸未超過 292 公分者，請至「超額行李」頁籤依一般規則計算。'
+      },
+      itemOver: '超件數（本件超出免費託運件數）',
+      itemOw0523: '超重 23–32 公斤',
+      itemOw32: '超重 32–45 公斤',
+      itemOs158: '超尺寸 158–203 公分',
+      itemOs203: '超尺寸 203–292 公分',
+      itemPetLe32: '寵物＋籠子 ≤32 公斤',
+      itemPetMid: '寵物＋籠子 32–42 公斤',
+      itemPetHiOld: '寵物＋籠子 42–50 公斤',
+      itemPetHiNew: '寵物＋籠子 32–50 公斤',
+      itemSport: '運動器材總尺寸 ＞292 公分',
+      itemSportSub: '須事先向訂位人員申請並取得授權',
+
+      modeLabel: { baggage:'超額行李試算金額', avih:'寵物託運試算金額', sport:'運動器材試算金額' },
+      resultPendingLabel: '尚未判定', resultPendingAmount: '請先完成 STEP 1',
+      resultInvalidRoute: '請選擇有效的出發地／目的地',
+      resultEmpty: '尚未選擇任何項目',
+      oldSys: '舊制', newSys: '新制',
+      resultNote: (rate, currency) => `單件費率：${currency} ${rate}／件。超過 45 公斤／292 公分（運動器材未事先申請）不予受理，請洽訂位／貨運單位評估，勿逕行收費。CM 系統顯示金額僅供參考，請以此試算並核對官方公告後再收費。`
+    },
+    en: {
+      eyebrow: 'Operations Policy Dept · Internal Reference Tool',
+      title: 'Excess Baggage Fee Calculator',
+      sub: 'Built from the AOD notice dated 2026-07-31 (new excess baggage rates effective 1 September 2026). For reference calculation only.',
+      banner: 'The CM system can only display the new rate and cannot determine which issue date applies, so the amount shown is for reference only. Follow the steps below to confirm the correct determination date before quoting or collecting a charge.',
+      modeTitle: 'What are you calculating?',
+      modeBaggage: 'Excess Baggage', modeAvih: 'Pet Transport', modeSport: 'Sporting Equipment',
+      step1Title: 'Determine old or new rate',
+      step1Hint: 'Answer the free baggage allowance question first — the tool will tell you which issue date to look up.',
+      bagsQ: 'A. Free checked-bag allowance on this fare',
+      bags1: 'Only 1 free bag', bags2: '2 free bags',
+      doiLabel: 'Determination date found',
+      whySummary: 'Why "original" vs "current" issue date',
+      whyBody: 'US DOT 14 CFR 399.88 prohibits an airline from raising the price of the <b>1st and 2nd</b> checked bag after a ticket has been purchased.<br><br>If the fare includes <b>only 1</b> free bag, the would-be 2nd bag (even if charged as excess) is still within that protection, so use the <b>original</b> (first) issue date even if the ticket was later reissued.<br><br>If the fare already includes <b>2</b> free bags, that protection has already been used by the included allowance, so any further excess bag falls outside it — use the <b>current (latest)</b> issue date instead.',
+      step2Title: 'Route / Zone',
+      footer: 'Built from internal AOD notice data for front-line reference only. Always verify against the Reservation system and the currently effective notice before charging.',
+
+      dateLabelOrig: 'B. Find the ORIGINAL (first-issue) date',
+      dateHintOrig: 'Even if this ticket was reissued, use the very first issue date — not the reissue date.',
+      lookupTitle: 'Lookup steps',
+      lookupOrig: ['Open the Reservation page (Ctrl+R), enter TWD/TKT189-XXXXXXXXXX, and expand the ticket.','Check whether there is an FO line.','No FO line (First Issue) → use the Date of Issue (DOI) shown directly.','Has an FO line (reissued) → use the original date of issue, not the reissue date.'],
+      dateLabelCurrent: 'B. Find the CURRENT (most recent) date',
+      dateHintCurrent: 'If this ticket was reissued, use the latest reissue date — not the original one.',
+      lookupCurrent: ['Click Edit E-ticket and expand the ticket details.','Use the Date of Issue shown directly — no need to check the FO line.'],
+
+      sysOld: 'Old rate applies (on/before 2026/08/31)', sysNew: 'New rate applies (from 2026/09/01)',
+
+      routePending: 'Complete STEP 1 first.',
+      routeHintDefault: 'Select the origin and destination zone.',
+      routeHintOld: 'Short-haul applies only when both sides are Zone 1; one side Zone 1 and one Zone 2 is long-haul.',
+      routeHintNew: 'New rate uses the Taiwan + Region 1–3 matrix; Canada departures and Sydney↔Auckland use flat rates.',
+      canadaOldLabel: 'Departing from Canada (flat rate, ignores zones)',
+      canadaNewLabel: 'Departing from Canada (flat rate by destination region, in CAD)',
+      sydAklLabel: 'Sydney (SYD) ↔ Auckland (AKL) special route (USD 50/piece, flat)',
+      originLabel: 'Origin', destLabel: 'Destination',
+      canadaFixedPlaceholder: 'Canada (fixed)',
+      oldZoneLabel: { z1: 'Zone 1 (Asia points and Guam)', z2: 'Zone 2 (outside Asia and Guam)' },
+      newRegionLabel: {
+        TW: 'Taiwan',
+        R1: 'Region 1 (Asia excl. Taiwan & South Asia, and Guam)',
+        R2: 'Region 2 (US West 5 cities, Canada, South Asia, Oceania, Middle East)',
+        R3: 'Region 3 (Other US, Europe, Africa, Central/South America)'
+      },
+      oldLegend: '<b>Zone 1</b>: Asia points and Guam (incl. Taiwan).<br><b>Zone 2</b>: everywhere outside Asia and Guam (North/South America, Europe, Middle East, Oceania, Africa).',
+      newLegend: '<b>Taiwan</b>: origin or destination is Taiwan.<br><b>Region 1</b>: Asia (excl. Taiwan, South Asia), Guam.<br><b>Region 2</b>: five US West Coast cities (LA, Ontario, San Francisco, Seattle, Phoenix), Canada, South Asia, Oceania, Middle East.<br><b>Region 3</b>: US (excl. Region 2, Guam), Europe, Africa, Central/South America.',
+      southAsiaNote: 'South Asia (per IATA Traffic Conference Area 3, sub-area 330 "South Asian Subcontinent") comprises: Afghanistan, Bangladesh, Bhutan, India, Maldives, Nepal, Pakistan, Sri Lanka.',
+      routeResultCanadaFixed: '→ Flat Canada-departure rate — zones are ignored.',
+      routeResultInvalidCombo: '→ Not a valid combination on this network — please reselect',
+      routeResultShort: '→ Both sides Zone 1 ⇒ <b>Short-haul, USD 150/piece</b>',
+      routeResultLong: '→ One Zone 1, one Zone 2 ⇒ <b>Long-haul, USD 200/piece</b>',
+      routeResultSydAkl: '→ Sydney↔Auckland flat rate — zones are ignored.',
+      routeResultCanadaNew: (dest, amt) => `→ Canada departure → ${dest} ⇒ <b>CAD ${amt}/piece</b>`,
+      routeResultTWTW: '→ Taiwan to Taiwan is not a valid international route',
+      routeResultMatrix: (o, d, r) => `→ ${o} to ${d} ⇒ <b>USD ${r}/piece</b>`,
+
+      step3Hint: {
+        baggage: 'Based on the weigh-in / measurement result, just add or subtract the piece count for the matching tier.',
+        avih: 'Add or subtract the piece count for the tier matching the pet + cage total weight.',
+        sport: 'If total dimensions are 292 cm or under, use the "Excess Baggage" tab and the general rules instead.'
+      },
+      itemOver: 'Over piece (this piece exceeds the free allowance)',
+      itemOw0523: 'Overweight 23–32 kg',
+      itemOw32: 'Overweight 32–45 kg',
+      itemOs158: 'Oversize 158–203 cm',
+      itemOs203: 'Oversize 203–292 cm',
+      itemPetLe32: 'Pet + cage ≤32 kg',
+      itemPetMid: 'Pet + cage 32–42 kg',
+      itemPetHiOld: 'Pet + cage 42–50 kg',
+      itemPetHiNew: 'Pet + cage 32–50 kg',
+      itemSport: 'Sporting equipment total dimensions >292 cm',
+      itemSportSub: 'Requires prior approval from Reservations',
+
+      modeLabel: { baggage:'Excess baggage total', avih:'Pet transport total', sport:'Sporting equipment total' },
+      resultPendingLabel: 'Not yet determined', resultPendingAmount: 'Complete STEP 1 first',
+      resultInvalidRoute: 'Select a valid origin / destination',
+      resultEmpty: 'Nothing selected yet',
+      oldSys: 'Old rate', newSys: 'New rate',
+      resultNote: (rate, currency) => `Over-piece rate used: ${currency} ${rate}/piece. Weight over 45 kg or dimensions over 292 cm (sporting equipment without prior approval) are not accepted — refer to Reservations/Cargo for assessment, do not charge directly. The CM system amount is for reference only; verify against the current official notice before charging.`
+    }
+  };
+  const t = (k) => STRINGS[state.lang][k];
+
+  const NEW_MATRIX = {
+    'TW-TW': null, 'TW-R1':150, 'TW-R2':200, 'TW-R3':220,
+    'R1-TW':150, 'R1-R1':170, 'R1-R2':220, 'R1-R3':240,
+    'R2-TW':200, 'R2-R1':220, 'R2-R2':240, 'R2-R3':260,
+    'R3-TW':220, 'R3-R1':240, 'R3-R2':260, 'R3-R3':280
+  };
+  const CANADA_NEW = { TW:280, R1:308, R2:337, R3:365 };
+  const OVERWEIGHT_MULT_TOP = { old: 2, new: 3 };
+
+  const fmt = (n) => n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
+
+  // ---------- static text ----------
+  function renderStatic(){
+    document.documentElement.lang = state.lang === 'zh' ? 'zh-Hant-TW' : 'en';
+    document.getElementById('txt-eyebrow').textContent = t('eyebrow');
+    document.getElementById('txt-title').textContent = t('title');
+    document.getElementById('txt-sub').textContent = t('sub');
+    document.getElementById('txt-banner').textContent = t('banner');
+    document.getElementById('txt-modeTitle').textContent = t('modeTitle');
+    document.getElementById('txt-step1Title').textContent = t('step1Title');
+    document.getElementById('txt-step1Hint').textContent = t('step1Hint');
+    document.getElementById('txt-bagsQ').textContent = t('bagsQ');
+    document.getElementById('txt-doiLabel').textContent = t('doiLabel');
+    document.getElementById('txt-whySummary').textContent = t('whySummary');
+    document.getElementById('txt-whyBody').innerHTML = t('whyBody');
+    document.getElementById('txt-step2Title').textContent = t('step2Title');
+    document.getElementById('txt-footer').textContent = t('footer');
+    document.querySelectorAll('[data-t]').forEach(el=>{ el.textContent = t(el.dataset.t); });
+    document.querySelectorAll('#langToggle button').forEach(b=>{
+      b.classList.toggle('active', b.dataset.lang === state.lang);
+    });
+  }
+
+  // ---------- system + date ----------
+  function computeSystem(){
+    if(!state.doi){ state.system = null; return; }
+    state.system = new Date(state.doi+"T00:00:00") >= CUTOFF ? 'new' : 'old';
+  }
+
+  function renderWhichDate(){
+    const label = document.getElementById('whichDateLabel');
+    const hint = document.getElementById('whichDateHint');
+    const steps = document.getElementById('lookupSteps');
+    const stepList = state.bags === 1 ? t('lookupOrig') : t('lookupCurrent');
+    label.textContent = state.bags === 1 ? t('dateLabelOrig') : t('dateLabelCurrent');
+    hint.textContent = state.bags === 1 ? t('dateHintOrig') : t('dateHintCurrent');
+    steps.innerHTML = `<div class="ft">${t('lookupTitle')}</div><ol>${stepList.map(s=>`<li>${s}</li>`).join('')}</ol>`;
+  }
+
+  function renderSysBadge(){
+    const wrap = document.getElementById('sysBadgeWrap');
+    if(!state.system){ wrap.innerHTML = ''; return; }
+    wrap.innerHTML = state.system === 'old'
+      ? `<div class="sysbadge old"><span class="dot"></span>${t('sysOld')}</div>`
+      : `<div class="sysbadge new"><span class="dot"></span>${t('sysNew')}</div>`;
+  }
+
+  // ---------- route picker ----------
+  function zoneSelect(key, labelText, labelMap, current){
+    const opts = Object.keys(labelMap).map(k=>`<option value="${k}" ${k===current?'selected':''}>${labelMap[k]}</option>`).join('');
+    return `<div class="field"><label>${labelText}</label><select data-key="${key}">${opts}</select></div>`;
+  }
+  function bindZoneSelects(){
+    document.querySelectorAll('#routePicker select[data-key]').forEach(sel=>{
+      sel.addEventListener('change', e=>{ state[e.target.dataset.key] = e.target.value; calc(); });
+    });
+  }
+
+  function renderRoutePicker(){
+    const el = document.getElementById('routePicker');
+    const hint = document.getElementById('routeHint');
+    if(!state.system){
+      el.innerHTML = `<p class="hint" style="margin:0">${t('routePending')}</p>`;
+      hint.textContent = t('routeHintDefault');
+      return;
+    }
+    const OLD_ZONE_LABEL = t('oldZoneLabel');
+    const NEW_REGION_LABEL = t('newRegionLabel');
+
+    if(state.system === 'old'){
+      hint.textContent = t('routeHintOld');
+      el.innerHTML = `
+        <label class="checkline"><input type="checkbox" id="canadaOriginOld" ${state.canadaOrigin?'checked':''}> ${t('canadaOldLabel')}</label>
+        <div class="routegrid" id="oldZoneGrid"></div>
+        <p class="routeresult" id="oldZoneResult"></p>
+        <div class="legend">${t('oldLegend')}</div>`;
+      const grid = document.getElementById('oldZoneGrid');
+      grid.innerHTML = zoneSelect('oldOrigin', t('originLabel'), OLD_ZONE_LABEL, state.oldOrigin) + zoneSelect('oldDest', t('destLabel'), OLD_ZONE_LABEL, state.oldDest);
+      grid.style.opacity = state.canadaOrigin ? '.4' : '1';
+      grid.style.pointerEvents = state.canadaOrigin ? 'none' : 'auto';
+      const r = document.getElementById('oldZoneResult');
+      if(state.canadaOrigin){
+        r.innerHTML = t('routeResultCanadaFixed');
+      } else {
+        const bothZ1 = state.oldOrigin==='z1' && state.oldDest==='z1';
+        const bothZ2 = state.oldOrigin==='z2' && state.oldDest==='z2';
+        r.innerHTML = bothZ2 ? t('routeResultInvalidCombo') : (bothZ1 ? t('routeResultShort') : t('routeResultLong'));
+      }
+      document.getElementById('canadaOriginOld').addEventListener('change', e=>{ state.canadaOrigin = e.target.checked; renderRoutePicker(); calc(); });
+      bindZoneSelects();
+    } else {
+      hint.textContent = t('routeHintNew');
+      el.innerHTML = `
+        <label class="checkline"><input type="checkbox" id="canadaOriginNew" ${state.canadaOrigin?'checked':''}> ${t('canadaNewLabel')}</label>
+        <label class="checkline"><input type="checkbox" id="sydAkl" ${state.sydAkl?'checked':''}> ${t('sydAklLabel')}</label>
+        <div class="routegrid" id="newZoneGrid"></div>
+        <p class="routeresult" id="newZoneResult"></p>
+        <div class="legend">${t('newLegend')}<span class="footnote">${t('southAsiaNote')}</span></div>`;
+      const grid = document.getElementById('newZoneGrid');
+      const originField = state.canadaOrigin
+        ? `<div class="field"><label>${t('originLabel')}</label><div style="padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:var(--paper);font-size:14px;color:var(--ink-soft)">${t('canadaFixedPlaceholder')}</div></div>`
+        : zoneSelect('newOrigin', t('originLabel'), NEW_REGION_LABEL, state.newOrigin);
+      grid.innerHTML = originField + zoneSelect('newDest', t('destLabel'), NEW_REGION_LABEL, state.newDest);
+      const destSel = grid.querySelector('select[data-key="newDest"]');
+      if(destSel){ destSel.style.opacity = state.sydAkl ? '.4' : '1'; destSel.style.pointerEvents = state.sydAkl ? 'none' : 'auto'; }
+      const r = document.getElementById('newZoneResult');
+      const shortLabel = (full) => full.split(state.lang==='zh' ? '（' : ' (')[0];
+      if(state.sydAkl){
+        r.textContent = t('routeResultSydAkl');
+      } else if(state.canadaOrigin){
+        r.innerHTML = t('routeResultCanadaNew')(shortLabel(NEW_REGION_LABEL[state.newDest]), CANADA_NEW[state.newDest]);
+      } else if(state.newOrigin==='TW' && state.newDest==='TW'){
+        r.innerHTML = t('routeResultTWTW');
+      } else {
+        const rate = NEW_MATRIX[`${state.newOrigin}-${state.newDest}`];
+        r.innerHTML = t('routeResultMatrix')(shortLabel(NEW_REGION_LABEL[state.newOrigin]), shortLabel(NEW_REGION_LABEL[state.newDest]), rate);
+      }
+      document.getElementById('canadaOriginNew').addEventListener('change', e=>{ state.canadaOrigin=e.target.checked; if(e.target.checked) state.sydAkl=false; renderRoutePicker(); calc(); });
+      document.getElementById('sydAkl').addEventListener('change', e=>{ state.sydAkl=e.target.checked; if(e.target.checked) state.canadaOrigin=false; renderRoutePicker(); calc(); });
+      bindZoneSelects();
+    }
+  }
+
+  function getOverPieceRate(){
+    if(!state.system) return {rate:null, currency:'USD'};
+    if(state.system === 'old'){
+      if(state.canadaOrigin) return {rate:280, currency:'CAD'};
+      if(state.oldOrigin==='z2' && state.oldDest==='z2') return {rate:null, currency:'USD'};
+      const bothZ1 = state.oldOrigin==='z1' && state.oldDest==='z1';
+      return {rate: bothZ1?150:200, currency:'USD'};
+    }
+    if(state.sydAkl) return {rate:50, currency:'USD'};
+    if(state.canadaOrigin) return {rate: CANADA_NEW[state.newDest], currency:'CAD'};
+    const rate = NEW_MATRIX[`${state.newOrigin}-${state.newDest}`];
+    return {rate: rate===undefined?null:rate, currency:'USD'};
+  }
+
+  // ---------- STEP 3 counters ----------
+  function stepperItem(key, label, tag, sub){
+    return `<div class="calc-item">
+      <div class="calc-head"><span class="calc-label">${label}</span>${tag?`<span class="tag">${tag}</span>`:''}${sub?`<span class="calc-sub">${sub}</span>`:''}</div>
+      <div class="stepper">
+        <button type="button" data-act="dec" data-key="${key}">−</button>
+        <span class="val" id="val-${key}">${state[key]}</span>
+        <button type="button" data-act="inc" data-key="${key}">+</button>
+      </div>
+    </div>`;
+  }
+  function bindSteppers(scope){
+    scope.querySelectorAll('button[data-key]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const k = btn.dataset.key;
+        const delta = btn.dataset.act==='inc' ? 1 : -1;
+        state[k] = Math.max(0,(state[k]||0)+delta);
+        const v = document.getElementById('val-'+k);
+        if(v) v.textContent = state[k];
+        calc();
+      });
+    });
+  }
+
+  function renderCounters(){
+    document.getElementById('step3Title').textContent = t('modeLabel')[state.mode];
+    document.getElementById('step3Hint').textContent = t('step3Hint')[state.mode];
+    const wrap = document.getElementById('mainCounters');
+
+    if(state.mode === 'baggage'){
+      const owTopTag = state.system==='old' ? '×2' : (state.system==='new' ? '×3' : '×2 / ×3');
+      wrap.innerHTML =
+        stepperItem('over', t('itemOver'),'×1') +
+        stepperItem('ow0523', t('itemOw0523'),'×0.5') +
+        stepperItem('ow32', t('itemOw32'), owTopTag) +
+        stepperItem('os158', t('itemOs158'),'×1') +
+        stepperItem('os203', t('itemOs203'),'×2');
+      bindSteppers(wrap);
+    } else if(state.mode === 'avih'){
+      if(state.system === 'old'){
+        wrap.innerHTML =
+          stepperItem('petLe32', t('itemPetLe32'),'×2') +
+          stepperItem('petMid', t('itemPetMid'),'×3') +
+          stepperItem('petHi', t('itemPetHiOld'),'×4');
+      } else {
+        wrap.innerHTML =
+          stepperItem('petLe32', t('itemPetLe32'),'×2') +
+          stepperItem('petHi', t('itemPetHiNew'),'×4');
+      }
+      bindSteppers(wrap);
+    } else {
+      wrap.innerHTML = stepperItem('sportOver', t('itemSport'),'×2', t('itemSportSub'));
+      bindSteppers(wrap);
+    }
+  }
+
+  // ---------- calculation ----------
+  function calc(){
+    renderSysBadge();
+    renderRoutePicker();
+    renderCounters();
+
+    const resEl = document.getElementById('result');
+    if(!state.system){
+      resEl.innerHTML = `<div class="top"><div><div class="label">${t('resultPendingLabel')}</div><div class="amount">${t('resultPendingAmount')}</div></div></div>`;
+      return;
+    }
+    const {rate, currency} = getOverPieceRate();
+    if(rate === null){
+      resEl.innerHTML = `<div class="top"><div><div class="label">${t('modeLabel')[state.mode]}</div><div class="amount">${t('resultInvalidRoute')}</div></div></div>`;
+      return;
+    }
+
+    const lines = [];
+    let total = 0;
+    const add = (label, count, mult) => { if(count>0){ const amt = rate*mult*count; total += amt; lines.push({label:`${label} ×${count}`, amt}); } };
+
+    if(state.mode === 'baggage'){
+      add(t('itemOver'), state.over, 1);
+      add(t('itemOw0523'), state.ow0523, 0.5);
+      add(t('itemOw32'), state.ow32, OVERWEIGHT_MULT_TOP[state.system]);
+      add(t('itemOs158'), state.os158, 1);
+      add(t('itemOs203'), state.os203, 2);
+    } else if(state.mode === 'avih'){
+      add(t('itemPetLe32'), state.petLe32, 2);
+      if(state.system === 'old'){ add(t('itemPetMid'), state.petMid, 3); }
+      add(state.system==='old' ? t('itemPetHiOld') : t('itemPetHiNew'), state.petHi, 4);
+    } else {
+      add(`${t('itemSport')} (${t('itemSportSub')})`, state.sportOver, 2);
+    }
+
+    let html = `<div class="top"><div><div class="label">${state.system==='old'?t('oldSys'):t('newSys')} · ${t('modeLabel')[state.mode]}</div>
+      <div class="amount"><span class="cur">${currency}</span>${fmt(total)}</div></div></div>`;
+    if(lines.length){
+      html += `<div class="breakdown">` + lines.map(l=>`<div class="line"><span>${l.label}</span><b>${currency} ${fmt(l.amt)}</b></div>`).join('') + `</div>`;
+    } else {
+      html += `<div class="breakdown"><div class="line"><span>${t('resultEmpty')}</span><b>—</b></div></div>`;
+    }
+    html += `<div class="note">${t('resultNote')(rate, currency)}</div>`;
+    resEl.innerHTML = html;
+  }
+
+  // ---------- wire static controls ----------
+  document.getElementById('langToggle').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-lang]');
+    if(!btn || btn.dataset.lang === state.lang) return;
+    state.lang = btn.dataset.lang;
+    renderStatic();
+    renderWhichDate();
+    calc();
+  });
+
+  document.querySelectorAll('#modeGroup .pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      document.querySelectorAll('#modeGroup .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      state.mode = p.querySelector('input').value;
+      calc();
+    });
+  });
+  document.querySelectorAll('#bagGroup .pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      document.querySelectorAll('#bagGroup .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      state.bags = parseInt(p.querySelector('input').value,10);
+      renderWhichDate();
+      calc();
+    });
+  });
+  document.getElementById('doi').addEventListener('input', e=>{ state.doi = e.target.value; computeSystem(); calc(); });
+
+  renderStatic();
+  renderWhichDate();
+  calc();
+})();
+</script>
+
+</body>
+</html>
