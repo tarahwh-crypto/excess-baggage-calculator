@@ -202,11 +202,11 @@ footer { max-width: 880px; margin: 20px auto 0; padding: 0 20px; font-size: 11px
 
 <div class="flowblock" id="lookupSteps"></div>
 
-<div class="field" style="margin-top:12px">
-<label for="doi" id="txt-doiLabel"></label>
-<input type="date" id="doi">
+<div class="hint" style="margin:16px 0 6px;font-weight:700;color:var(--ink)" id="txt-sysQ"></div>
+<div class="pillgroup" id="sysGroup">
+<label class="pill"><input type="radio" name="sys" value="old"><span data-t="sysOld"></span></label>
+<label class="pill"><input type="radio" name="sys" value="new"><span data-t="sysNew"></span></label>
 </div>
-<div id="sysBadgeWrap"></div>
 
 <details class="why">
 <summary id="txt-whySummary"></summary>
@@ -236,13 +236,10 @@ footer { max-width: 880px; margin: 20px auto 0; padding: 0 20px; font-size: 11px
 
 <script>
 (function(){
-const CUTOFF = new Date("2026-09-01T00:00:00");
-
 const state = {
 lang: 'zh',
 mode: 'baggage',
 bags: 1,
-doi: '',
 system: null, // 'old' | 'new' | null
 canadaOrigin: false,
 sydAkl: false,
@@ -270,7 +267,7 @@ step1Title: '判定適用新制或舊制',
 step1Hint: '先回答這張票的免費行李額度，工具會告訴你該查哪一個開票日。',
 bagsQ: 'A．這張票價產品的免費託運行李額度',
 bags1: '僅含 1 件', bags2: '已含 2 件',
-doiLabel: '查到的判定日期',
+sysQ: 'C．請點選適用的費率制度',
 whySummary: '為什麼要分「原始」跟「最新」開票日',
 whyBody: '美國 DOT（運輸部）14 CFR 399.88 規定，機票購票後航空公司不得再對已售出的<b>第 1、2 件</b>託運行李漲價。<br><br>票價產品若<b>僅含 1 件</b>免費行李，旅客要掛的第 2 件（即便是超額）仍落在這條保護範圍內，所以即使改過票，也要用<b>最原始</b>的開票日判定費率。<br><br>票價產品若<b>已含 2 件</b>，代表這個保護額度已經用在免費行李上，任何再多出來的超額行李已經超出保護範圍，改用<b>最新（當前）</b>的開票日判定即可。',
 step2Title: '航線 / 分區',
@@ -349,7 +346,7 @@ step1Title: 'Determine old or new rate',
 step1Hint: 'Answer the free baggage allowance question first — the tool will tell you which issue date to look up.',
 bagsQ: 'A. Free checked-bag allowance on this fare',
 bags1: 'Only 1 free bag', bags2: '2 free bags',
-doiLabel: 'Determination date found',
+sysQ: 'C. Select the applicable rate system',
 whySummary: 'Why "original" vs "current" issue date',
 whyBody: 'US DOT 14 CFR 399.88 prohibits an airline from raising the price of the <b>1st and 2nd</b> checked bag after a ticket has been purchased.<br><br>If the fare includes <b>only 1</b> free bag, the would-be 2nd bag (even if charged as excess) is still within that protection, so use the <b>original</b> (first) issue date even if the ticket was later reissued.<br><br>If the fare already includes <b>2</b> free bags, that protection has already been used by the included allowance, so any further excess bag falls outside it — use the <b>current (latest)</b> issue date instead.',
 step2Title: 'Route / Zone',
@@ -442,7 +439,7 @@ document.getElementById('txt-modeTitle').textContent = t('modeTitle');
 document.getElementById('txt-step1Title').textContent = t('step1Title');
 document.getElementById('txt-step1Hint').textContent = t('step1Hint');
 document.getElementById('txt-bagsQ').textContent = t('bagsQ');
-document.getElementById('txt-doiLabel').textContent = t('doiLabel');
+document.getElementById('txt-sysQ').textContent = t('sysQ');
 document.getElementById('txt-whySummary').textContent = t('whySummary');
 document.getElementById('txt-whyBody').innerHTML = t('whyBody');
 document.getElementById('txt-step2Title').textContent = t('step2Title');
@@ -453,12 +450,6 @@ b.classList.toggle('active', b.dataset.lang === state.lang);
 });
 }
 
-// ---------- system + date ----------
-function computeSystem(){
-if(!state.doi){ state.system = null; return; }
-state.system = new Date(state.doi+"T00:00:00") >= CUTOFF ? 'new' : 'old';
-}
-
 function renderWhichDate(){
 const label = document.getElementById('whichDateLabel');
 const hint = document.getElementById('whichDateHint');
@@ -467,14 +458,6 @@ const stepList = state.bags === 1 ? t('lookupOrig') : t('lookupCurrent');
 label.textContent = state.bags === 1 ? t('dateLabelOrig') : t('dateLabelCurrent');
 hint.textContent = state.bags === 1 ? t('dateHintOrig') : t('dateHintCurrent');
 steps.innerHTML = `<div class="ft">${t('lookupTitle')}</div><ol>${stepList.map(s=>`<li>${s}</li>`).join('')}</ol>`;
-}
-
-function renderSysBadge(){
-const wrap = document.getElementById('sysBadgeWrap');
-if(!state.system){ wrap.innerHTML = ''; return; }
-wrap.innerHTML = state.system === 'old'
-? `<div class="sysbadge old"><span class="dot"></span>${t('sysOld')}</div>`
-: `<div class="sysbadge new"><span class="dot"></span>${t('sysNew')}</div>`;
 }
 
 // ---------- route picker ----------
@@ -625,7 +608,6 @@ bindSteppers(wrap);
 
 // ---------- calculation ----------
 function calc(){
-renderSysBadge();
 renderRoutePicker();
 renderCounters();
 
@@ -696,7 +678,14 @@ renderWhichDate();
 calc();
 });
 });
-document.getElementById('doi').addEventListener('input', e=>{ state.doi = e.target.value; computeSystem(); calc(); });
+document.querySelectorAll('#sysGroup .pill').forEach(p=>{
+p.addEventListener('click', ()=>{
+document.querySelectorAll('#sysGroup .pill').forEach(x=>x.classList.remove('active'));
+p.classList.add('active');
+state.system = p.querySelector('input').value;
+calc();
+});
+});
 
 renderStatic();
 renderWhichDate();
