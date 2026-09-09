@@ -516,7 +516,9 @@ const originField = state.canadaOrigin
 ? `<div class="field"><label>${t('originLabel')}</label><div style="padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:var(--paper);font-size:14px;color:var(--ink-soft)">${t('canadaFixedPlaceholder')}</div></div>`
 : zoneSelect('newOrigin', t('originLabel'), NEW_REGION_LABEL, state.newOrigin);
 grid.innerHTML = originField + zoneSelect('newDest', t('destLabel'), NEW_REGION_LABEL, state.newDest);
+const originSel = grid.querySelector('select[data-key="newOrigin"]');
 const destSel = grid.querySelector('select[data-key="newDest"]');
+if(originSel){ originSel.style.opacity = state.sydAkl ? '.4' : '1'; originSel.style.pointerEvents = state.sydAkl ? 'none' : 'auto'; }
 if(destSel){ destSel.style.opacity = state.sydAkl ? '.4' : '1'; destSel.style.pointerEvents = state.sydAkl ? 'none' : 'auto'; }
 const r = document.getElementById('newZoneResult');
 const shortLabel = (full) => full.split(state.lang==='zh' ? '（' : ' (')[0];
