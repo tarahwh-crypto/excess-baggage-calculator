@@ -242,8 +242,10 @@ footer { max-width: 880px; margin: 20px auto 0; padding: 0 20px; font-size: 11px
 
 <script>
 (function(){
+// 網址帶 ?lang=en／?lang=zh 時以該語言開啟（供行李政策判定工具英文頁面連入）；未帶則維持預設中文。
+const urlLang = new URLSearchParams(location.search).get('lang');
 const state = {
-lang: 'zh',
+lang: (urlLang === 'en' || urlLang === 'zh') ? urlLang : 'zh',
 modes: { baggage: true, avih: false, sport: false },
 bags: 1,
 hasFO: null, // null | true | false — only meaningful when bags === 1
